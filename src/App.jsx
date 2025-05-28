@@ -5,7 +5,7 @@ import {
 
 function App() {
   const [materias, setMaterias] = useState([]);
-  const [semestre, setSemestre] = useState(null);
+  const [semestre, setSemestre] = useState('');
   const [carrito, setCarrito] = useState([]);
   const [mostrarCarrito, setMostrarCarrito] = useState(false);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
@@ -118,9 +118,9 @@ function App() {
         body: JSON.stringify({ materias: carrito, total })
       });
       await response.json();
-      alert('✅ Matrícula realizada con éxito');
-      setCarrito([]);
       setMostrarCarrito(false);
+      alert(`✅ Matrícula realizada con éxito\n\nMaterias:\n${carrito.map(m => `• ${m.nombre} (Semestre ${m.semestre})`).join('\n')}\n\nTotal: $${total.toLocaleString()}`);
+      setCarrito([]);
     } catch (error) {
       console.error('Error realizando matrícula:', error);
       alert('Error realizando matrícula');
@@ -143,20 +143,44 @@ function App() {
                 <p className="text-gray-600">Universidad Virtual</p>
               </div>
             </div>
-            <button
-              onClick={() => setMostrarFormulario(true)}
-              className="flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-300 transform hover:scale-105"
-            >
-              <Plus className="w-5 h-5" />
-              <span>Nueva Asignatura</span>
-            </button>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => setMostrarFormulario(true)}
+                className="flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-300 transform hover:scale-105"
+              >
+                <Plus className="w-5 h-5" />
+                <span>Nueva Asignatura</span>
+              </button>
+              <button
+                onClick={() => setMostrarCarrito(true)}
+                className="relative bg-white border border-blue-600 text-blue-600 px-4 py-2 rounded-xl hover:bg-blue-50 transition-all font-semibold"
+              >
+                <ShoppingCart className="w-5 h-5" />
+                {carrito.length > 0 && (
+                  <span className="absolute top-0 right-0 transform translate-x-1/2 -translate-y-1/2 bg-red-600 text-white text-xs px-2 py-0.5 rounded-full">
+                    {carrito.length}
+                  </span>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-6">
-        {/* Filtros y estadísticas omitidos por espacio */}
-        {/* Lista materias */}
+        <div className="flex justify-end mb-6">
+          <select
+            onChange={e => setSemestre(e.target.value)}
+            value={semestre}
+            className="border border-gray-300 px-4 py-2 rounded-lg shadow-sm"
+          >
+            <option value="">Todos los semestres</option>
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
+              <option key={num} value={num}>{`Semestre ${num}`}</option>
+            ))}
+          </select>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {!loading && materiasFiltradas.length === 0 ? (
             <div className="col-span-full text-center py-12">
@@ -192,7 +216,6 @@ function App() {
         </div>
       </main>
 
-      {/* Modal Carrito */}
       {mostrarCarrito && (
         <div className="fixed inset-0 bg-black bg-opacity-40 z-50 flex justify-center items-center p-4">
           <div className="bg-white rounded-xl w-full max-w-lg shadow-lg p-6 relative">
@@ -203,34 +226,44 @@ function App() {
             {carrito.length === 0 ? (
               <p className="text-gray-600">No has matriculado ninguna materia.</p>
             ) : (
-              <ul className="space-y-2 max-h-60 overflow-y-auto">
-                {carrito.map(m => (
-                  <li key={m._id} className="flex justify-between items-center bg-gray-100 p-2 rounded-lg">
-                    <span className="font-semibold text-gray-800">{m.nombre}</span>
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm text-purple-600 font-bold">${m.valor?.toLocaleString()}</span>
-                      <button onClick={() => removerDelCarrito(m._id)} className="text-red-500 hover:text-red-700">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
+              <>
+                <ul className="space-y-2 max-h-52 overflow-y-auto">
+                  {carrito.map(m => (
+                    <li key={m._id} className="flex justify-between items-center bg-gray-100 p-2 rounded-lg">
+                      <span className="font-semibold text-gray-800">{m.nombre}</span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm text-purple-600 font-bold">${m.valor?.toLocaleString()}</span>
+                        <button onClick={() => removerDelCarrito(m._id)} className="text-red-500 hover:text-red-700">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+
+                <div className="mt-6">
+                  <h3 className="text-lg font-bold mb-2">Resumen de Matrícula</h3>
+                  <ul className="text-sm text-gray-700 mb-4 space-y-1 max-h-32 overflow-y-auto">
+                    {carrito.map((m, i) => (
+                      <li key={i}>• {m.nombre} (Semestre {m.semestre}) - ${m.valor?.toLocaleString()}</li>
+                    ))}
+                  </ul>
+                  <div className="flex justify-between items-center">
+                    <span className="text-xl font-bold text-purple-700">Total: ${totalCarrito.toLocaleString()}</span>
+                    <button
+                      onClick={confirmarMatricula}
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-xl font-semibold"
+                    >
+                      Confirmar Matrícula
+                    </button>
+                  </div>
+                </div>
+              </>
             )}
-            <div className="mt-6 flex justify-between items-center">
-              <span className="text-xl font-bold text-purple-700">Total: ${totalCarrito.toLocaleString()}</span>
-              <button
-                onClick={confirmarMatricula}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-xl font-semibold"
-              >
-                Confirmar Matrícula
-              </button>
-            </div>
           </div>
         </div>
       )}
 
-      {/* Modal Formulario */}
       {mostrarFormulario && (
         <div className="fixed inset-0 bg-black bg-opacity-40 z-50 flex justify-center items-center p-4">
           <div className="bg-white rounded-xl w-full max-w-md shadow-lg p-6 relative">
